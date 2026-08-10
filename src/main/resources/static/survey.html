@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transportation survey</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+
+    <div class="container">
+        <!-- <h1 class="text-center my-4">Transportation Survey</h1> -->
+
+        <!--laptop view
+        <div class="position-relative my-4 d-none d-sm-block">
+            <img src="images/bank-logo.png" alt="Bank Logo" class="bank-logo position-absolute start-0 top-50 translate-middle-y">
+            <h1 class="text-center mb-0">Transportation Survey</h1>
+        </div> -->
+
+        <!--Mobile view
+        <div class="d-flex d-sm-none align-items-center gap-2 my-4">
+            <img src="images/bank-logo.png" alt="Bank Logo" class="bank-logo-mobile">
+            <h1 class="mb-0 flex-grow-1 text-center bank-title-mobile">Transportation Survey</h1>
+        </div> -->
+
+        <div class="position-relative my-4">
+            <img src="images/bank-logo.png" alt="Bank Logo" class="bank-logo position-absolute start-0 top-50 translate-middle-y">
+            <h1 class="text-center mb-0 header-title">Transportation Survey</h1>
+        </div>
+
+
+
+        <form id="surveyForm">
+            <div class="card mb-4">
+                <div class="card-header">
+                    Employee information
+                </div>
+
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Employee code
+                                </label>
+                                <input type="text" class="form-control" id="employeeCode" placeholder="Enter employee code" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Employee name
+                                </label>
+                                <input type="text" class="form-control" id="employeeName" placeholder="Enter employee name" required>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div id="employeeStatus" class="px-3 pb-3"></div>
+
+            <div>
+                <div class="card mb-4">
+                    <div class="card-header">
+                        Address
+                    </div>
+
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Governorate
+                                    </label>
+                                    <select class="form-select" id="governorate">
+                                        <option value="">Select governorate</option>
+                                        <option value="Cairo">Cairo</option>
+                                        <option value="Giza">Giza</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Area
+                                    </label>
+                                    <select class="form-select" id="area">
+                                        <option value="">Select area</option>
+                                        <!-- <option value="Nasr City">Nasr City</option>
+                                        <option value="Heliopolis">Heliopolis</option>
+                                        <option value="New Cairo">New Cairo</option>
+                                        <option value="Maadi">Maadi</option> -->
+                                    </select>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Street
+                            </label>
+                            <input type="text" class="form-control" id="street" placeholder="Enter street name" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Nearest pickup point <!--(optional)-->
+                            </label>
+                            <select class="form-select" id="pickupPoint">
+                                <option value="">Select pickup point</option>
+                                <!-- <option>Nasr City - Genena Mall</option>
+                                <option>Maadi - Degla</option>
+                                <option>Rehab Gate 6</option> -->
+                            </select>
+                            <input type="text" class="form-control d-none" id="pickupPointManual" placeholder="Enter nearest pickup point">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    Transportation details
+                </div>
+
+                <div class="card-body">
+                    <label class="form-label">
+                        Avarage trip time (one way)
+                    </label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tripTime" id="less30" value="less30">
+                        <label class="form-check-label" for="less30">Less than 30 minutes</label>
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tripTime" id="halfOneHour" value="halfOneHour">
+                        <label class="form-check-label">30 minutes to 1 hour</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tripTime" id="moreOneHour" value="moreOneHour">
+                        <label class="form-check-label">More than 1 hour</label>
+                    </div>
+
+                    <hr class="my-4">
+                    <div class="mb-3">
+                        <label class="form-label">Monthly transportation cost</label>
+                        <select class="form-select" id="monthlyCost">
+                            <option value="">Select Monthly Cost</option>
+                            <option value="less2000">Less than 2000 EGP</option>
+                            <option value="2001_3000">2000 - 3000 EGP</option>
+                            <option value="3001_4000">3000 - 4000 EGP</option>
+                            <option value="4001-5000">4000 - 5000 EGP</option>
+                            <option value="more5000">More than 5000 EGP</option>
+                        </select>
+                    </div>
+
+                    <hr class="my-4">
+                    <div class="mb-3">
+                        <label class="form-label">Current transportation method</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="transportMethod" id="Car" value="Car">
+                            <label class="form-check-label" for="Car">Car</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="transportMethod" id="publicTransport" value="publicTransport">
+                            <label class="form-check-label" for="publicTransport">Public Transport</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="transportMethod" id="uber" value="uber">
+                            <label class="form-check-label" for="uber">uber</label>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <label class="form-label">Would you use bank-subsidized transportation with a monthly salary deduction?</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="bankTransport" id="BankYes" value="yes">
+                        <label class="form-check-label" for="BankYes">Yes</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="bankTransport" id="BankNo" value="no">
+                        <label class="form-check-label" for="BankNo">No</label>
+                    </div>
+
+                    <hr class="my-4">
+                    <label class="form-label">Are you interested in carpooling?</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="carpooling" id="carpoolYes" value="yes">
+                        <label class="form-check-label" for="carpoolYes">Yes</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="carpooling" id="carpoolNo" value="no">
+                        <label class="form-check-label" for="carpoolNo">No</label>
+                    </div>
+
+                    <hr class="my-4">
+                    <div class="mb-3">
+                        <label class="form-label">Biggest challenge you face with transportation?</label>
+                        <textarea class="form-control" id="Challenges" rows="3" placeholder="Please describe the biggest challenge you face with transportation"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Any suggestions to improve transportation?</label>
+                        <textarea class="form-control" id="Suggestions" rows="3" placeholder="Please provide any suggestions to improve transportation"></textarea>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    Additional information
+                </div>
+
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Any additional comments or feedback?</label>
+                        <textarea class="form-control" id="comments" rows="4" placeholder="Please provide any additional comments or feedback"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="survey.js"></script>
+
+</body>
+</html>
