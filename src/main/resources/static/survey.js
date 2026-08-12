@@ -258,7 +258,7 @@ function loadSavedEmployee() {
 }
 
 function saveEmployeeToDevice(code, name) {
-    localStorage.setItem(EMP_STORAGE_KEY, JSON.stringify({ code, name }));
+    localStorage.setItem(EMP_STORAGE_KEY, JSON.stringify({ code, name, role: "EMPLOYEE" }));
 }
 
 function setRadioValue(name, value) {
@@ -403,6 +403,10 @@ surveyForm.addEventListener("submit", async function (e) {
 document.addEventListener("DOMContentLoaded", async () => {
     const saved = loadSavedEmployee();
     if (saved) {
+        if (saved.role === "HR") {
+            window.location.href = "hr.html";
+            return;
+        }
         employeeCodeInput.value = saved.code;
         employeeNameInput.value = saved.name;
         lockEmployeeFields();

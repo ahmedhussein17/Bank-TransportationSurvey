@@ -21,6 +21,13 @@ public class EmployeeService {
                 .filter(emp -> emp.getEmployeeName().trim().equalsIgnoreCase(employeeName.trim()))
                 .filter(emp -> emp.getRole().trim().equalsIgnoreCase(requiredRole.trim()));
 
+    }
 
+    public Optional<Employee> verifyAny(String employeeCode, String employeeName){
+        if(employeeCode == null || employeeName == null){
+            return Optional.empty();
+        }
+        return repository.findById(employeeCode.trim()).filter(emp -> emp.getEmployeeName().trim().equalsIgnoreCase(employeeName.trim()));
     }
 }
+
