@@ -226,13 +226,12 @@ areaSelect.addEventListener("change", function () {
 
 });
 
-// ===================== Employee verification + edit-existing-data + device lock =====================
-// Employees are added to the database manually by an admin (not through this form).
-// When the user fills in their code amd name, we verify them against that table and,
-// if they've already submitted a survey, load it into the form so they can edit it.
-// Once verified, the code/name are saved to this device (localStorage) and locked,
-// so the same person can't retype different credentials from this browser.
 
+
+// Verify employee
+// Load saved survey
+// Save employee
+// Lock fields
 const employeeCodeInput = document.getElementById("employeeCode");
 const employeeNameInput = document.getElementById("employeeName");
 const employeeStatus = document.getElementById("employeeStatus");
