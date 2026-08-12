@@ -19,7 +19,7 @@ public class TransportationSurveyRequest {
     @NotBlank(message = "Street is required")
     private String street;
 
-    // @NotBlank(message = "Pickup point is required")
+    @NotBlank(message = "Pickup point is required")
     private String pickupPoint;
 
     @NotBlank(message = "Trip time is required")
