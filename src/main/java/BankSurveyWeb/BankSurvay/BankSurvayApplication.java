@@ -10,4 +10,3 @@ public class BankSurvayApplication {
 		SpringApplication.run(BankSurvayApplication.class, args);
 	}
 }
-//to try commits
