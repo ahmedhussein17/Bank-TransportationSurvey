@@ -1,15 +1,16 @@
 package BankSurveyWeb.BankSurvay.controller;
 
 import BankSurveyWeb.BankSurvay.dto.TransportationSurveyRequest;
+import BankSurveyWeb.BankSurvay.model.Employee;
 import BankSurveyWeb.BankSurvay.model.TransportationSurvey;
-import BankSurveyWeb.BankSurvay.service.EmployeeService;
 import BankSurveyWeb.BankSurvay.service.TransportationSurveyService;
+import BankSurveyWeb.BankSurvay.service.WorkstationService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-// import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -17,38 +18,35 @@ import java.util.Optional;
 public class TransportationSurveyController {
 
     private final TransportationSurveyService service;
-    private final EmployeeService employeeService;
+    private final WorkstationService workstationService;
 
-    public TransportationSurveyController(TransportationSurveyService service, EmployeeService employeeService){
+    public TransportationSurveyController(TransportationSurveyService service, WorkstationService workstationService){
         this.service = service;
-        this.employeeService = employeeService;
+        this.workstationService = workstationService;
     }
 
     @PostMapping
-    public ResponseEntity<TransportationSurvey> createSurvey(@Valid @RequestBody TransportationSurveyRequest request) {
+    public ResponseEntity<TransportationSurvey> createSurvey(@Valid @RequestBody TransportationSurveyRequest request, HttpServletRequest httpRequest) {
+        Optional<Employee> employee = workstationService.resolveByIp(httpRequest.getRemoteAddr());
+        if (employee.isEmpty() || !"EMPLOYEE".equalsIgnoreCase(employee.get().getRole())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        request.setEmployeeCode(employee.get().getEmployeeCode());
+        request.setEmployeeName(employee.get().getEmployeeName());
+
         TransportationSurvey saved = service.saveFromRequest(request);
         return ResponseEntity.ok(saved);
     }
 
-    // @GetMapping
-    // public List<TransportationSurvey> getAllSurveys() {
-    //     return service.getAllSurveys();
-    // }
-
-    // @GetMapping("/{employeeCode}")
-    // public ResponseEntity<TransportationSurvey> getByEmployeeCode(@PathVariable String employeeCode) {
-    //     Optional<TransportationSurvey> survey = service.getByEmployeeCode(employeeCode);
-    //     return survey.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
-    // }
-
-    @GetMapping("/{employeeCode}")
-    public ResponseEntity<TransportationSurvey> getByEmployeeCode(@PathVariable String employeeCode, @RequestParam String employeeName){
-        
-        if(employeeService.verify(employeeCode, employeeName, "EMPLOYEE").isEmpty()){
+    @GetMapping("/mine")
+    public ResponseEntity<TransportationSurvey> getMine(HttpServletRequest httpRequest) {
+        Optional<Employee> employee = workstationService.resolveByIp(httpRequest.getRemoteAddr());
+        if (employee.isEmpty() || !"EMPLOYEE".equalsIgnoreCase(employee.get().getRole())) {
             return ResponseEntity.status(403).build();
         }
-        Optional<TransportationSurvey> survey = service.getByEmployeeCode(employeeCode);
+
+        Optional<TransportationSurvey> survey = service.getByEmployeeCode(employee.get().getEmployeeCode());
         return survey.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
-
 }

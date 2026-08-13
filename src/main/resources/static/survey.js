@@ -56,12 +56,10 @@ const areas = {
     ]
 };
 
-//da b y get by id ll select elements
 const governorateSelect = document.getElementById("governorate");
 const areaSelect = document.getElementById("area");
-const pickupSelect = document.getElementById("pickupPoint"); // da ll pickup points
-const pickupManualInput = document.getElementById("pickupPointManual"); //da 3shan el amaken el mlhash enha tselect pickup point
-
+const pickupSelect = document.getElementById("pickupPoint");
+const pickupManualInput = document.getElementById("pickupPointManual");
 
 governorateSelect.addEventListener("change", function () {
 
@@ -85,9 +83,6 @@ governorateSelect.addEventListener("change", function () {
     }
 
 });
-
-
-// pickup points
 
 const pickupPoints = {
 
@@ -219,56 +214,22 @@ areaSelect.addEventListener("change", function () {
 
         });
 
-    } else{
+    } else {
         pickupSelect.classList.add("d-none");
         pickupManualInput.classList.remove("d-none");
     }
 
 });
 
-
-
-// Verify employee
-// Load saved survey
-// Save employee
-// Lock fields
-const employeeCodeInput = document.getElementById("employeeCode");
-const employeeNameInput = document.getElementById("employeeName");
-const employeeStatus = document.getElementById("employeeStatus");
-const surveyForm = document.getElementById("surveyForm");
-
-const EMP_STORAGE_KEY = "bankSurveyEmployee";
-
-function lockEmployeeFields() {
-    employeeCodeInput.readOnly = true;
-    employeeNameInput.readOnly = true;
-    employeeCodeInput.classList.add("bg-light");
-    employeeNameInput.classList.add("bg-light");
-}
-
-function loadSavedEmployee() {
-    const raw = localStorage.getItem(EMP_STORAGE_KEY);
-    if (!raw) return null;
-    try {
-        return JSON.parse(raw);
-    } catch {
-        return null;
-    }
-}
-
-function saveEmployeeToDevice(code, name) {
-    localStorage.setItem(EMP_STORAGE_KEY, JSON.stringify({ code, name, role: "EMPLOYEE" }));
+function getPickupPointValue() {
+    return pickupManualInput.classList.contains("d-none")
+        ? pickupSelect.value
+        : pickupManualInput.value.trim();
 }
 
 function setRadioValue(name, value) {
     const el = document.querySelector(`input[name="${name}"][value="${value}"]`);
     if (el) el.checked = true;
-}
-
-function getPickupPointValue(){
-    return pickupManualInput.classList.contains("d-none")
-    ? pickupSelect.value
-    : pickupManualInput.value.trim();
 }
 
 function fillFormWithSurvey(survey) {
@@ -296,32 +257,46 @@ function fillFormWithSurvey(survey) {
     if (survey.carpooling) setRadioValue("carpooling", survey.carpooling);
 }
 
-async function checkEmployeeAndLoadSurvey() {
-    const code = employeeCodeInput.value.trim();
-    const name = employeeNameInput.value.trim();
+
+
+//Employee identity — auto-detected by workstation IP
+const employeeCodeInput = document.getElementById("employeeCode");
+const employeeNameInput = document.getElementById("employeeName");
+const employeeStatus = document.getElementById("employeeStatus");
+const surveyForm = document.getElementById("surveyForm");
+
+function lockEmployeeFields() {
+    employeeCodeInput.readOnly = true;
+    employeeNameInput.readOnly = true;
+    employeeCodeInput.classList.add("bg-light");
+    employeeNameInput.classList.add("bg-light");
+}
+
+async function initSurveyPage() {
     employeeStatus.innerHTML = "";
 
-    if (!code || !name) return;
-
     try {
+        const res = await fetch("/api/employees/auto-detect");
 
-        // by verify en el code wl name mwgodeen fl database
-        const verifyRes = await fetch(
-            `/api/employees/verify?employeeCode=${encodeURIComponent(code)}&employeeName=${encodeURIComponent(name)}&role=EMPLOYEE`
-        );
-
-        if (!verifyRes.ok) {
+        if (!res.ok) {
             employeeStatus.innerHTML =
-                '<div class="alert alert-danger py-2 mb-0">Employee code/name not recognized. Please check with HR/admin.</div>';
+                '<div class="alert alert-warning">This computer is not registered. Please contact IT.</div>';
+            surveyForm.querySelector("button[type=submit]").disabled = true;
             return;
         }
 
-        //lock the credentials to this device so they can't be changed later.
-        saveEmployeeToDevice(code, name);
+        const employee = await res.json();
+
+        if (employee.role !== "EMPLOYEE") {
+            window.location.href = "hr.html";
+            return;
+        }
+
+        employeeCodeInput.value = employee.employeeCode;
+        employeeNameInput.value = employee.employeeName;
         lockEmployeeFields();
 
-        // Check if they already have a submitted survey to edit.
-        const surveyRes = await fetch(`/api/surveys/${encodeURIComponent(code)}?employeeName=${encodeURIComponent(name)}`);  //di el 3delt fiha 
+        const surveyRes = await fetch("/api/surveys/mine");
         if (surveyRes.ok) {
             const survey = await surveyRes.json();
             fillFormWithSurvey(survey);
@@ -329,19 +304,14 @@ async function checkEmployeeAndLoadSurvey() {
                 '<div class="alert alert-info py-2 mb-0">Loaded your previous submission — edit and resubmit to update it.</div>';
         } else {
             employeeStatus.innerHTML =
-                '<div class="alert alert-success py-2 mb-0">Employee verified. No previous submission found — fill out the form below.</div>';
+                '<div class="alert alert-success py-2 mb-0">Welcome, ' + employee.employeeName + '. Fill out the form below.</div>';
         }
     } catch (err) {
-        console.error(err);
         employeeStatus.innerHTML =
-            '<div class="alert alert-warning py-2 mb-0">Could not reach the server to verify employee.</div>';
+            '<div class="alert alert-warning">Could not reach the server.</div>';
     }
 }
 
-employeeCodeInput.addEventListener("blur", checkEmployeeAndLoadSurvey);
-employeeNameInput.addEventListener("blur", checkEmployeeAndLoadSurvey);
-
-//Submit (single handler — verifies, then upserts)
 surveyForm.addEventListener("submit", async function (e) {
     e.preventDefault();
 
@@ -351,8 +321,6 @@ surveyForm.addEventListener("submit", async function (e) {
     };
 
     const survey = {
-        employeeCode: employeeCodeInput.value.trim(),
-        employeeName: employeeNameInput.value.trim(),
         governorate: document.getElementById("governorate").value,
         area: document.getElementById("area").value,
         street: document.getElementById("street").value,
@@ -367,17 +335,6 @@ surveyForm.addEventListener("submit", async function (e) {
         comments: document.getElementById("comments").value,
     };
 
-    // Re-verify right before submit so no one can bypass the check by
-    // editing the form without ever blurring the employee fields.
-    const verifyRes = await fetch(
-        `/api/employees/verify?employeeCode=${encodeURIComponent(survey.employeeCode)}&employeeName=${encodeURIComponent(survey.employeeName)}&role=EMPLOYEE`
-    );
-    if (!verifyRes.ok) {
-        employeeStatus.innerHTML =
-            '<div class="alert alert-danger py-2 mb-0">Employee code/name not recognized. Cannot submit.</div>';
-        return;
-    }
-
     try {
         const res = await fetch("/api/surveys", {
             method: "POST",
@@ -385,11 +342,6 @@ surveyForm.addEventListener("submit", async function (e) {
             body: JSON.stringify(survey),
         });
         if (!res.ok) throw new Error("Request failed: " + res.status);
-
-        // Successful save also confirms this device's saved credentials, keep them locked.
-        saveEmployeeToDevice(survey.employeeCode, survey.employeeName);
-        lockEmployeeFields();
-
         alert("Survey submitted — thank you!");
     } catch (err) {
         console.error(err);
@@ -397,18 +349,4 @@ surveyForm.addEventListener("submit", async function (e) {
     }
 });
 
-//Auto-load on page visit
-// lock the fields ll 3mlo el survey  abl keda.
-document.addEventListener("DOMContentLoaded", async () => {
-    const saved = loadSavedEmployee();
-    if (saved) {
-        if (saved.role === "HR") {
-            window.location.href = "hr.html";
-            return;
-        }
-        employeeCodeInput.value = saved.code;
-        employeeNameInput.value = saved.name;
-        lockEmployeeFields();
-        await checkEmployeeAndLoadSurvey();
-    }
-});
+document.addEventListener("DOMContentLoaded", initSurveyPage);

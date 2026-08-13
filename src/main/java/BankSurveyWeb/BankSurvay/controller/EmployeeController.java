@@ -12,14 +12,21 @@ import org.springframework.web.bind.annotation.RestController;
 
 import BankSurveyWeb.BankSurvay.model.Employee;
 import BankSurveyWeb.BankSurvay.service.EmployeeService;
+import BankSurveyWeb.BankSurvay.service.WorkstationService;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/employees")
 public class EmployeeController {
-    private final EmployeeService service;
 
-    public EmployeeController(EmployeeService service){
+    private final EmployeeService service;
+    private final WorkstationService workstationService;
+
+    
+
+    public EmployeeController(EmployeeService service, WorkstationService workstationService) {
         this.service = service;
+        this.workstationService = workstationService;
     }
 
     @GetMapping("/verify")
@@ -32,6 +39,13 @@ public class EmployeeController {
     public ResponseEntity<Employee> verifyAny(@RequestParam String employeeCode, @RequestParam String employeeName){
         Optional<Employee> employee = service.verifyAny(employeeCode, employeeName);
         return employee.map(ResponseEntity :: ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/auto-detect")
+    public ResponseEntity<Employee> autoDetect(HttpServletRequest request){
+        System.out.println("Detected IP: [" + request.getRemoteAddr() + "]");
+        Optional<Employee> employee = workstationService.resolveByIp(request.getRemoteAddr());
+        return employee.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
 }

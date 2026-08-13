@@ -4,11 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 
 public class TransportationSurveyRequest {
 
-    @NotBlank(message = "Employee code is required")
-    private String employeeCode;
 
-    @NotBlank(message = "Employee name is required")
-    private String employeeName;
+    private String employeeCode; //set server-side from requesting IP
+    private String employeeName; //set server-side from requesting IP
 
     @NotBlank(message = "Governorate is required")
     private String governorate;
