@@ -58,6 +58,7 @@ INSERT INTO employee (employee_code, employee_name, role) VALUES ('HR001', 'HR N
 INSERT INTO workstation (ip_address, employee_code) VALUES ('192.168.1.101', 'EMP001');
 INSERT INTO workstation (ip_address, employee_code) VALUES ('192.168.1.102', 'HR001');
 ```
+Note -- to get the ip address write ipconfig in the cmd
 
 ### 4. Open the site
 
