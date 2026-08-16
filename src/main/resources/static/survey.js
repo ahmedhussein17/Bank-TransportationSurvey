@@ -287,14 +287,18 @@ async function initSurveyPage() {
 
         const employee = await res.json();
 
-        if (employee.role !== "EMPLOYEE") {
-            window.location.href = "hr.html";
-            return;
-        }
+        // if (employee.role !== "EMPLOYEE") {
+        //     window.location.href = "hr.html";
+        //     return;
+        // }
 
         employeeCodeInput.value = employee.employeeCode;
         employeeNameInput.value = employee.employeeName;
-        lockEmployeeFields();
+
+        if(employee.role === "HR"){
+            document.getElementById("hrNavLink").classList.remove("d-none");
+        }
+        // lockEmployeeFields();
 
         const surveyRes = await fetch("/api/surveys/mine");
         if (surveyRes.ok) {

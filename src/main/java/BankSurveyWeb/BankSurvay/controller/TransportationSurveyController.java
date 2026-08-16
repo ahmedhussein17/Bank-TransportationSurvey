@@ -28,7 +28,7 @@ public class TransportationSurveyController {
     @PostMapping
     public ResponseEntity<TransportationSurvey> createSurvey(@Valid @RequestBody TransportationSurveyRequest request, HttpServletRequest httpRequest) {
         Optional<Employee> employee = workstationService.resolveByIp(httpRequest.getRemoteAddr());
-        if (employee.isEmpty() || !"EMPLOYEE".equalsIgnoreCase(employee.get().getRole())) {
+        if (employee.isEmpty()) {
             return ResponseEntity.status(403).build();
         }
 
@@ -42,7 +42,7 @@ public class TransportationSurveyController {
     @GetMapping("/mine")
     public ResponseEntity<TransportationSurvey> getMine(HttpServletRequest httpRequest) {
         Optional<Employee> employee = workstationService.resolveByIp(httpRequest.getRemoteAddr());
-        if (employee.isEmpty() || !"EMPLOYEE".equalsIgnoreCase(employee.get().getRole())) {
+        if (employee.isEmpty()) {
             return ResponseEntity.status(403).build();
         }
 
