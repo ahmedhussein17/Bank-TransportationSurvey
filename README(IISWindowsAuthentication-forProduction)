@@ -1,0 +1,192 @@
+# Production Changes — IIS Windows Authentication Identity Switch
+
+Switching employee identity detection from IP-based to Windows domain login via **IIS Windows Authentication** acting as a reverse proxy in front of the Spring Boot app. IIS handles all domain authentication natively; the app itself just reads the resolved username from a request header. No Kerberos library, no keytab, no SPN registration inside the app.
+
+Nothing else in the app changes — survey form, editing, upsert, HR dashboard all stay exactly as built and tested.
+
+## Files to delete entirely
+
+```
+src/main/java/BankSurveyWeb/BankSurvay/model/Workstation.java
+src/main/java/BankSurveyWeb/BankSurvay/repository/WorkstationRepository.java
+src/main/java/BankSurveyWeb/BankSurvay/service/WorkstationService.java
+```
+No longer needed — identity now comes from IIS, no IP-to-employee mapping table required.
+
+**Confirmed against your uploaded project:** there's no `SecurityConfig.java` and no Kerberos/`spring-boot-starter-security` entries in `pom.xml`, so the commented-out Kerberos-cleanup block in the original doc doesn't apply — nothing there to remove.
+
+## Files that need NO changes
+
+```
+src/main/resources/static/entry.js
+src/main/resources/static/survey.js
+src/main/resources/static/hr.js
+src/main/resources/static/index.html
+src/main/resources/static/survey.html
+src/main/resources/static/hr.html
+src/main/resources/static/style.css
+src/main/java/BankSurveyWeb/BankSurvay/model/Employee.java
+src/main/java/BankSurveyWeb/BankSurvay/model/TransportationSurvey.java
+src/main/java/BankSurveyWeb/BankSurvay/repository/EmployeeRepository.java
+src/main/java/BankSurveyWeb/BankSurvay/repository/TransportationSurveyRepository.java
+src/main/java/BankSurveyWeb/BankSurvay/service/TransportationSurveyService.java
+src/main/java/BankSurveyWeb/BankSurvay/dto/TransportationSurveyRequest.java
+src/main/java/BankSurveyWeb/BankSurvay/pom.xml
+```
+
+## ⚠️ updated from the last document  — `service/EmployeeService.java` DOES need a change
+
+The three controllers below all call `service.findByCode(username)` / `employeeService.findByCode(username)`. That method **does not exist** in your current `EmployeeService.java` — it only has `verify(code, name, role)` and `verifyAny(code, name)`, both of which require a name to match too. Without adding `findByCode`, the project won't compile.
+
+Add this method to the class (it's a direct lookup by primary key, since `employeeCode` is `@Id` on `Employee`):
+
+```java
+public Optional<Employee> findByCode(String employeeCode){
+    if(employeeCode == null || employeeCode.isBlank()){
+        return Optional.empty();
+    }
+    return repository.findById(employeeCode.trim());
+}
+```
+
+Add it right after `verifyAny(...)`, before the closing brace of the class. No import changes needed — `Optional` and `Employee` are already imported.
+
+---
+
+## `controller/EmployeeController.java`
+
+Find:
+```java
+@GetMapping("/auto-detect")
+public ResponseEntity<Employee> autoDetect(HttpServletRequest request) {
+    Optional<Employee> employee = workstationService.resolveByIp(request.getRemoteAddr());
+    return employee.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+}
+```
+Replace with:
+```java
+@GetMapping("/auto-detect")
+public ResponseEntity<Employee> autoDetect(@RequestHeader(value = "X-Remote-User", required = false) String remoteUser) {
+    if (remoteUser == null || remoteUser.isBlank()) {
+        return ResponseEntity.status(401).build();
+    }
+    String username = stripDomainPrefix(remoteUser);
+    Optional<Employee> employee = service.findByCode(username);
+    return employee.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+}
+
+private String stripDomainPrefix(String remoteUser) {
+    // IIS typically passes "DOMAIN\username" — keep just the username part.
+    int backslash = remoteUser.indexOf('\\');
+    return backslash >= 0 ? remoteUser.substring(backslash + 1) : remoteUser;
+}
+```
+Also remove: the `WorkstationService` import, constructor parameter, and field from this file. Add `import org.springframework.web.bind.annotation.RequestHeader;`.
+
+---
+
+## `controller/TransportationSurveyController.java`
+
+Find (in `createSurvey`):
+```java
+Optional<Employee> employee = workstationService.resolveByIp(httpRequest.getRemoteAddr());
+```
+Replace with:
+```java
+Optional<Employee> employee = resolveFromHeader(httpRequest);
+```
+
+Find (in `getMine`), same replacement:
+```java
+Optional<Employee> employee = workstationService.resolveByIp(httpRequest.getRemoteAddr());
+```
+→
+```java
+Optional<Employee> employee = resolveFromHeader(httpRequest);
+```
+
+Add this method to the class:
+```java
+private Optional<Employee> resolveFromHeader(HttpServletRequest httpRequest) {
+    String remoteUser = httpRequest.getHeader("X-Remote-User");
+    if (remoteUser == null || remoteUser.isBlank()) return Optional.empty();
+    int backslash = remoteUser.indexOf('\\');
+    String username = backslash >= 0 ? remoteUser.substring(backslash + 1) : remoteUser;
+    return employeeService.findByCode(username);
+}
+```
+Also: replace the `WorkstationService` field/constructor-parameter/import with an `EmployeeService employeeService` field, wired the same way in the constructor.
+
+---
+
+## `controller/AdminSurveyController.java`
+
+Find:
+```java
+Optional<Employee> employee = workstationService.resolveByIp(httpRequest.getRemoteAddr());
+```
+Replace with:
+```java
+Optional<Employee> employee = resolveFromHeader(httpRequest);
+```
+Add the same `resolveFromHeader` helper as above. Same swap: `WorkstationService` field/import removed, replaced with `EmployeeService employeeService`.
+
+---
+
+## `application.properties`
+
+Replace entirely with:
+```properties
+spring.application.name=BankSurvay
+spring.datasource.url=jdbc:mysql://${DB_HOST}:3306/bank_survey
+spring.datasource.username=${DB_USER}
+spring.datasource.password=${DB_PASSWORD}
+
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.show-sql=false
+
+server.address=127.0.0.1
+server.port=8080
+```
+`server.address=127.0.0.1` is important, not optional — see the security note below.
+
+**Note:** your current file has `ddl-auto=update`, hardcoded `root`/`sql1_mysql` credentials, and `show-sql=true` — all fine for local dev, all replaced above for production. You'll need `DB_HOST`, `DB_USER`, `DB_PASSWORD` set as actual environment variables on the server before starting the app, or it won't start.
+
+---
+
+## Database — no schema change, only new/updated rows
+
+`employee_code` must be each person's real AD login username (their `sAMAccountName` — verify via Active Directory Users and Computers, or `whoami` on a domain machine):
+```sql
+INSERT INTO employee (employee_code, employee_name, role) VALUES ('ahussein', 'Ahmed Hussein', 'EMPLOYEE');
+INSERT INTO employee (employee_code, employee_name, role) VALUES ('syoussef', 'Sara Youssef', 'HR');
+```
+The old `workstation` table is no longer used — safe to drop once this is confirmed working:
+```sql
+DROP TABLE workstation;
+```
+
+---
+
+## IIS setup (not code — done once on the server, using Windows Server features)
+
+1. **Install IIS** with these role services: **Windows Authentication**, **Application Request Routing (ARR)**, and **URL Rewrite** (ARR and URL Rewrite are separate downloads via Web Platform Installer if not already present).
+2. **Create a new IIS site** for this app (pointing to any empty folder — IIS only proxies through it, it doesn't serve files directly).
+3. In that site's **Authentication** settings: **disable Anonymous Authentication**, **enable Windows Authentication**.
+4. In **URL Rewrite**, add an inbound rule that proxies all requests to the Spring Boot app:
+   - Pattern: `(.*)`
+   - Action: **Rewrite** to `http://127.0.0.1:8080/{R:1}`
+5. Still in that rule (or as a separate outbound rule), add a **Server Variable** action:
+   - Set `HTTP_X_REMOTE_USER` to `{LOGON_USER}`
+   - (You'll first need to add `HTTP_X_REMOTE_USER` to ARR's allowed server variables list — IIS Manager → server-level ARR settings → **Server Proxy Settings** → add it there, or edit `applicationHost.config` directly if not visible in the UI.)
+6. Confirm the Spring Boot app itself is **not directly reachable** from the network — with `server.address=127.0.0.1` in `application.properties`, it only listens on the local machine, so IIS (also on that machine) is the only path in. Employees hit IIS (port 80/443), never the raw Spring Boot port directly.
+
+## Why `server.address=127.0.0.1` matters — security note
+
+The header `X-Remote-User` is only trustworthy because **IIS** is the one setting it, after verifying the person's real Windows identity. If the Spring Boot app were still reachable directly on the network (its old default), anyone could bypass IIS entirely and send a request straight to the app with a **fake** `X-Remote-User` header claiming to be someone else — the app would trust it blindly, since it has no way to know the header didn't come from IIS. Binding the app to `127.0.0.1` closes that gap: it becomes physically unreachable except through IIS on the same machine.
+
+## Before calling this production-ready
+
+Test end-to-end from one real domain-joined employee desktop: open the IIS site's URL, confirm it lands directly on the survey with **no login prompt**, their code/name auto-filled, and their previous submission (if any) loads correctly for editing. Also verify directly hitting `http://<server>:8080` from another machine on the network fails/times out (confirming the app truly isn't reachable except through IIS).
+
+**Also verify before go-live:** run a full `mvn compile` (or build in your IDE) after making all the above changes — the missing `findByCode` method is the kind of gap that only shows up as a compile error, not something you'd catch by re-reading the doc.
